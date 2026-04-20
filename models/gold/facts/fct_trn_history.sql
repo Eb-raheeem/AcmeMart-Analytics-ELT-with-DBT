@@ -1,6 +1,4 @@
-with fct_trn_history as (
-    select * from {{ ref("stg_transactions")}}
-)
+with fct_trn_history as (select * from {{ ref("stg_transactions") }})
 
 select
     transaction_id,
@@ -9,9 +7,8 @@ select
     product_id,
     payment_method,
     quantity,
-    unit_price, 
+    unit_price,
     quantity * unit_price as total_amount,
     trn_timestamp,
     trn_date
-from
-    fct_trn_history
+from fct_trn_history

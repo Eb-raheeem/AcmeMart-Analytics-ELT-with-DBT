@@ -6,3 +6,4 @@ sources:
     schema: bronze  
     tables:
       - name: transaction_history
+        description: Raw transaction data for all stores

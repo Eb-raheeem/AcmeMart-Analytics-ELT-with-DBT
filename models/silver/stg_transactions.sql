@@ -1,6 +1,4 @@
-with stg_transactions as (
-    select * from {{ ref("bronze_transactions")}}
-)
+with stg_transactions as (select * from {{ ref("bronze_transactions") }})
 
 select
     transaction_id,
@@ -11,8 +9,8 @@ select
     category,
     payment_method,
     cast(quantity as integer) as quantity,
-    cast(unit_price as number(10,2)) as unit_price,
-    cast(total_amount as number(10,2)) as total_amount,
+    cast(unit_price as number(10, 2)) as unit_price,
+    cast(total_amount as number(10, 2)) as total_amount,
     -- standardized timestamp
     coalesce(
         try_to_timestamp(transaction_timestamp, 'YYYY-MM-DD HH24:MI:SS'),
@@ -27,5 +25,4 @@ select
         ) as date
     ) as trn_date
 
-from 
-    stg_transactions
+from stg_transactions
