@@ -1,0 +1,9 @@
+version: 2
+
+sources:
+  - name: bronze
+    database: acmemart_db  
+    schema: bronze  
+    tables:
+      - name: transaction_history
+        description: Raw transaction data for all stores
