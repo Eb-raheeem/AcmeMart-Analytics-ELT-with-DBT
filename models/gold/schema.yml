@@ -1,0 +1,307 @@
+version: 2
+
+models:
+
+  # ── FACTS ───────────────────────────────────────────────────────────────────
+
+  - name: fct_trn_history
+    description: >
+      Core fact table containing one row per transaction line item.
+      Sourced from the staging transactions layer and serves as the
+      primary grain for all downstream aggregations.
+    config:
+      tags: ["gold", "facts"]
+
+    columns:
+
+      - name: transaction_id
+        description: Unique identifier for each transaction.
+        tests:
+          - not_null
+          - unique
+
+      - name: customer_id
+        description: Foreign key referencing dim_customers.
+        tests:
+          - not_null
+          - relationships:
+              arguments: 
+                to: ref('dim_customers')
+                field: customer_id
+
+      - name: store_id
+        description: Foreign key referencing dim_stores.
+        tests:
+          - not_null
+          - relationships:
+              arguments: 
+                to: ref('dim_stores')
+                field: store_id
+
+      - name: product_id
+        description: Foreign key referencing dim_products.
+        tests:
+          - not_null
+          - relationships:
+              arguments: 
+                to: ref('dim_products')
+                field: product_id
+
+      - name: payment_method
+        description: Method used to complete the transaction (e.g. cash, card, transfer).
+        tests:
+          - not_null
+
+      - name: quantity
+        description: Number of units purchased in the transaction.
+        tests:
+          - not_null
+
+      - name: unit_price
+        description: Price per single unit at the time of transaction.
+        tests:
+          - not_null
+
+      - name: total_amount
+        description: Derived total value of the transaction (quantity * unit_price).
+        tests:
+          - not_null
+
+      - name: trn_timestamp
+        description: Full timestamp of when the transaction occurred.
+        tests:
+          - not_null
+
+      - name: trn_date
+        description: >
+          Date portion of the transaction timestamp. Used as the join key
+          to dim_date and as the grouping key in aggregate models.
+        tests:
+          - not_null
+
+
+  # ── DIMENSIONS ──────────────────────────────────────────────────────────────
+
+  - name: dim_customers
+    description: >
+      Dimension table of distinct customers derived from the staging
+      transactions layer.
+    config:
+      tags: ["gold", "dimensions"]
+
+    columns:
+      - name: customer_id
+        description: Unique identifier for each customer.
+        tests:
+          - not_null
+          - unique
+
+
+  - name: dim_products
+    description: >
+      Dimension table of distinct products enriched with name and category,
+      derived from the staging transactions layer.
+    config:
+      tags: ["gold", "dimensions"]
+
+    columns:
+      - name: product_id
+        description: Unique identifier for each product.
+        tests:
+          - not_null
+          - unique
+
+      - name: product_name
+        description: Human-readable name of the product.
+        tests:
+          - not_null
+
+      - name: category
+        description: Product category used for grouping and reporting.
+        tests:
+          - not_null
+
+
+  - name: dim_stores
+    description: >
+      Dimension table of distinct stores derived from the staging
+      transactions layer.
+    config:
+      tags: ["gold", "dimensions"]
+
+    columns:
+      - name: store_id
+        description: Unique identifier for each store.
+        tests:
+          - not_null
+          - unique
+
+
+  - name: dim_date
+    description: >
+      Date spine dimension covering a continuous 90-day window starting
+      2026-01-01. Generated via Snowflake's GENERATOR function and used
+      to enrich fact data with calendar attributes.
+    config:
+      tags: ["gold", "dimensions"]
+
+    columns:
+      - name: date_day
+        description: The calendar date. Primary key of this dimension.
+        tests:
+          - not_null
+          - unique
+
+      - name: year
+        tests:
+          - not_null
+
+      - name: month
+        tests:
+          - not_null
+
+      - name: day
+        tests:
+          - not_null
+
+      - name: quarter
+        tests:
+          - not_null
+
+      - name: day_of_week
+        tests:
+          - not_null
+
+      - name: day_name
+        tests:
+          - not_null
+
+      - name: week_of_year
+        tests:
+          - not_null
+
+      - name: day_type
+        tests:
+          - not_null
+          - accepted_values:
+              arguments: 
+                values: ["weekday", "weekend"]
+
+
+  # ── AGGREGATES ──────────────────────────────────────────────────────────────
+
+  - name: daily_sales_summary
+    description: >
+      Aggregated daily sales metrics at the product * date grain.
+      Summarises units sold, revenue, and transaction counts from
+      fct_trn_history.
+    config:
+      tags: ["gold", "aggregates"]
+
+    columns:
+      - name: trn_date
+        tests:
+          - not_null
+
+      - name: product_id
+        tests:
+          - not_null
+
+      - name: total_units_sold
+        tests:
+          - not_null
+
+      - name: total_revenue
+        tests:
+          - not_null
+
+      - name: total_transactions
+        tests:
+          - not_null
+
+
+  - name: historical_lifetime_value
+    description: >
+      Customer-level lifetime value aggregation built from fct_trn_history.
+    config:
+      tags: ["gold", "aggregates"]
+
+    columns:
+      - name: customer_id
+        tests:
+          - not_null
+          - unique
+
+      - name: total_orders
+        tests:
+          - not_null
+
+      - name: lifetime_value
+        tests:
+          - not_null
+
+      - name: avg_order_value
+        tests:
+          - not_null
+
+
+  - name: product_performance
+    description: >
+      Product-level performance summary combining transaction facts
+      with product dimension attributes.
+    config:
+      tags: ["gold", "aggregates"]
+
+    columns:
+      - name: product_id
+        tests:
+          - not_null
+          - unique
+
+      - name: product_name
+        tests:
+          - not_null
+
+      - name: category
+        tests:
+          - not_null
+
+      - name: revenue
+        tests:
+          - not_null
+
+      - name: units_sold
+        tests:
+          - not_null
+
+      - name: transactions
+        tests:
+          - not_null
+
+
+  - name: revenue_trend
+    description: >
+      Daily revenue trend enriched with calendar attributes.
+    config:
+      tags: ["gold", "aggregates"]
+
+    columns:
+      - name: year
+        tests:
+          - not_null
+
+      - name: month
+        tests:
+          - not_null
+
+      - name: day
+        tests:
+          - not_null
+
+      - name: revenue
+        tests:
+          - not_null
+
+      - name: transactions
+        tests:
+          - not_null
