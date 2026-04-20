@@ -1,0 +1,55 @@
+version: 2
+
+models:
+  - name: stg_transactions
+    description: >
+      Cleaned and standardized transaction data sourced from the bronze layer.
+      This model handles type casting, timestamp standardization, and basic data quality preparation
+      for downstream analytical models.
+
+    columns:
+
+      - name: transaction_id
+        description: "Unique identifier for each transaction"
+        tests:
+          - not_null
+          - unique
+
+      - name: customer_id
+        description: "Identifier for the customer who made the transaction"
+        tests:
+          - not_null
+
+      - name: store_id
+        description: "Store where the transaction occurred"
+
+      - name: product_id
+        description: "Unique identifier for the product sold"
+
+      - name: product_name
+        description: "Name of the product at time of transaction"
+
+      - name: category
+        description: "Product category"
+
+      - name: payment_method
+        description: "Method used for payment (e.g., cash, card, mobile)"
+
+      - name: quantity
+        description: "Number of units purchased in the transaction"
+        tests:
+          - not_null
+
+      - name: unit_price
+        description: "Price per unit of product, standardized to numeric format"
+
+      - name: total_amount
+        description: "Total transaction value calculated as quantity × unit_price"
+
+      - name: trn_timestamp
+        description: >
+          Standardized transaction timestamp parsed from multiple formats
+          (ISO and DD/MM/YYYY formats supported)
+
+      - name: trn_date
+        description: "Date extracted from transaction timestamp for daily aggregations"
